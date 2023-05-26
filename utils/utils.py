@@ -121,10 +121,14 @@ def just_show(reconstructed_pixel_values,sample,patch_size,per_var_patch_side,ou
     plt.colorbar()
     plt.savefig(f'{output_path}/reconstructed_pixel_values.jpg')
     plt.close()
+    plt.cla()
+    plt.clf()
+    gc.collect()
     plt.matshow(np.squeeze(sample[luck1,luck2,:patch_size*per_var_patch_side,:patch_size*per_var_patch_side].cpu().detach().numpy()))
     plt.colorbar()
     plt.savefig(f'{output_path}/sample.jpg')
     plt.close()
+    plt.cla()
+    plt.clf()
     gc.collect()
-    
     
