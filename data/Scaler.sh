@@ -1,0 +1,9 @@
+python Scaler.py --inputPath ../DATA/RAW/ --var U10 ; python Scaler.py --inputPath ../DATA/RAW/ --var V10 ; python Scaler.py --inputPath ../DATA/RAW/ --var T2 ; python Scaler.py --inputPath ../DATA/RAW/ --var MSLP
+python Scaler.py --inputPath ../DATA/RAW/ --var SP ; python Scaler.py --inputPath ../DATA/RAW/ --var VV100 ; python Scaler.py --inputPath ../DATA/RAW/ --var U100 ; python Scaler.py --inputPath ../DATA/RAW/ --var V100
+python Scaler.py --inputPath ../DATA/RAW/ --var RH100 ; python Scaler.py --inputPath ../DATA/RAW/ --var T100 ; python Scaler.py --inputPath ../DATA/RAW/ --var VV300 ; python Scaler.py --inputPath ../DATA/RAW/ --var U300
+python Scaler.py --inputPath ../DATA/RAW/ --var V300 ; python Scaler.py --inputPath ../DATA/RAW/ --var RH300 ; python Scaler.py --inputPath ../DATA/RAW/ --var T300 ; python Scaler.py --inputPath ../DATA/RAW/ --var VV500
+python Scaler.py --inputPath ../DATA/RAW/ --var U500 ; python Scaler.py --inputPath ../DATA/RAW/ --var V500 ; python Scaler.py --inputPath ../DATA/RAW/ --var RH500 ; python Scaler.py --inputPath ../DATA/RAW/ --var T500
+python Scaler.py --inputPath ../DATA/RAW/ --var VV850 ; python Scaler.py --inputPath ../DATA/RAW/ --var U850 ; python Scaler.py --inputPath ../DATA/RAW/ --var V850 ; python Scaler.py --inputPath ../DATA/RAW/ --var RH850
+python Scaler.py --inputPath ../DATA/RAW/ --var T850 ; python Scaler.py --inputPath ../DATA/RAW/ --var VV1000 ; python Scaler.py --inputPath ../DATA/RAW/ --var U1000 ; python Scaler.py --inputPath ../DATA/RAW/ --var V1000
+python Scaler.py --inputPath ../DATA/RAW/ --var RH1000 ; python Scaler.py --inputPath ../DATA/RAW/ --var T1000 ; python Scaler.py --inputPath ../DATA/RAW/ --var TIME1 ; python Scaler.py --inputPath ../DATA/RAW/ --var TIME2
+python Scaler.py --inputPath ../DATA/RAW/ --var POS1 ; python Scaler.py --inputPath ../DATA/RAW/ --var POS2 ; python Scaler.py --inputPath ../DATA/RAW/ --var POS3 ; python Scaler.py --inputPath ../DATA/RAW/ --var TCWV
