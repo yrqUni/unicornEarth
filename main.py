@@ -127,6 +127,8 @@ def main():
 
     start_log_time = time.time()
     for epoch in range(args.num_train_epochs):
+        
+        torch.distributed.barrier()
         print_rank_0(f'Use data in list {os.listdir(args.data_sample_input_path)}, len is {len(os.listdir(args.data_sample_input_path))}',args.global_rank)
         P = 0
         for data_part in os.listdir(args.data_sample_input_path):
@@ -146,7 +148,8 @@ def main():
                 eval_sampler = DistributedSampler(ValDataset)
             train_dataloader = DataLoader(TrDataset, sampler=train_sampler, batch_size=args.per_device_train_batch_size)
             eval_dataloader = DataLoader(ValDataset, sampler=eval_sampler, batch_size=args.per_device_eval_batch_size)
-            
+            torch.distributed.barrier()
+
             def evaluation(model, eval_dataloader):
                 model.eval()
                 losses = 0
