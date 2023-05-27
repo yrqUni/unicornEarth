@@ -168,13 +168,11 @@ def main():
                 return losses, reconstructed_pixel_values, sample
 
             # Train!
-            print_rank_0("***** Running training *****", args.global_rank)
             if args.do_eval:
-                print_rank_0(f"***** Evaluating, Epoch {epoch+1}/{args.num_train_epochs} *****", args.global_rank)
                 val_loss,_,_ = evaluation(model, eval_dataloader)
-                print_rank_0(f"val loss: {val_loss}", args.global_rank)
-            
-            print_rank_0(f"Beginning of Epoch {epoch+1}/{args.num_train_epochs}, Total Micro Batches {len_train_dataloader}", args.global_rank)
+                print_rank_0(f"***** Beginning epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} ***** val loss: {val_loss} ", args.global_rank)
+
+            print_rank_0(f"Epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))}, Total Micro Batches {len_train_dataloader}", args.global_rank)
             training_step_losses = []
             model.train()
             for step, batch in enumerate(train_dataloader):
@@ -205,9 +203,8 @@ def main():
                     save_hf_format(model, args)
             # Evaluate perplexity on the validation set.
             if args.do_eval:
-                print_rank_0(f"***** Evaluating, Epoch {epoch+1}/{args.num_train_epochs} *****", args.global_rank)
                 val_loss,_,_ = evaluation(model, eval_dataloader)
-                print_rank_0(f"val loss: {val_loss}", args.global_rank)                
+                print_rank_0(f"***** End epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} ***** val loss: {val_loss} ", args.global_rank)                
             model.tput_timer.update_epoch_count()
 
     if args.ckpt_output_dir is not None:
