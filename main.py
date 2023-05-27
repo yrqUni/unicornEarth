@@ -159,7 +159,7 @@ def main():
                     mask = batch['mask'].to(device) # (N, num_patch)
                     # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
                     with torch.no_grad():
-                        if args.train_stage=='FT':
+                        if 'FT' in args.train_stage:
                             none_mask = batch['none_mask'].to(device) # (N, num_patch)
                             outputs = model(sample, bool_masked_pos=none_mask)
                         if 'PT' in args.train_stage:
@@ -185,7 +185,7 @@ def main():
                 GT = batch['GT'].to(device) # (N, 1, 768, 768)
                 mask = batch['mask'].to(device) # (N, num_patch)
                 # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
-                if args.train_stage=='FT':
+                if 'FT' in args.train_stage:
                     none_mask = batch['none_mask'].to(device) # (N, num_patch)
                     outputs = model(sample, bool_masked_pos=none_mask)
                 if 'PT' in args.train_stage:
