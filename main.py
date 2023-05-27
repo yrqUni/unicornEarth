@@ -159,7 +159,11 @@ def main():
                     mask = batch['mask'].to(device) # (N, num_patch)
                     # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
                     with torch.no_grad():
-                        outputs = model(sample, bool_masked_pos=mask)
+                        if args.train_stage=='FT':
+                            none_mask = batch['none_mask'].to(device) # (N, num_patch)
+                            outputs = model(sample, bool_masked_pos=none_mask)
+                        if 'PT' in args.train_stage:
+                            outputs = model(sample, bool_masked_pos=mask)
                     loss1, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
                     loss2 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
                     losses += loss2.float()
@@ -181,7 +185,11 @@ def main():
                 GT = batch['GT'].to(device) # (N, 1, 768, 768)
                 mask = batch['mask'].to(device) # (N, num_patch)
                 # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
-                outputs = model(sample, bool_masked_pos=mask)
+                if args.train_stage=='FT':
+                    none_mask = batch['none_mask'].to(device) # (N, num_patch)
+                    outputs = model(sample, bool_masked_pos=none_mask)
+                if 'PT' in args.train_stage:
+                    outputs = model(sample, bool_masked_pos=mask)
                 loss1, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
                 loss2 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
                 model.backward(loss2)
