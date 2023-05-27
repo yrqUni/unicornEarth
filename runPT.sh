@@ -1,13 +1,13 @@
 #!/bin/bash
 
 MODE=PT
-OUTPUT_PATH=./Exp/2/$MODE
+OUTPUT_PATH=./Exp/1/$MODE
 mkdir -p $OUTPUT_PATH
 
 # 16 128 768 6*6 target mask rate ((128/16)^2)/((768/16)^2) 0.278
 # deepspeed main.py \
 # deepspeed --hostfile=host main.py \
-deepspeed --hostfile=host1 main.py \
+deepspeed --hostfile=host main.py \
    --data_sample_input_path /public/home/hydeng/Workspace/yrqUni/unicornEarth/DATA_Demo/Merge/ \
    --data_padmask_input_path /public/home/hydeng/Workspace/yrqUni/unicornEarth/DATA_Demo/PadMask/ \
    --val_rate 0.1 \
@@ -16,7 +16,7 @@ deepspeed --hostfile=host1 main.py \
    --target_num_patches 64 \
    --per_var_patch_side 8 \
    --init_model unicornEarth-base \
-   --pretrain \
+   --train_stage PT1 \
    --ckpt_output_dir $OUTPUT_PATH \
    --data_output_path $OUTPUT_PATH \
    --seed 1017 \

@@ -37,7 +37,7 @@ def parse_args():
     # train conf
     parser.add_argument("--per_device_train_batch_size",type=int,default=2,help='',)
     parser.add_argument("--per_device_eval_batch_size",type=int,default=2,help='',)
-    parser.add_argument("--pretrain",action='store_true',help='')
+    parser.add_argument("--train_stage", type=str, default=None, help='')
     parser.add_argument("--do_eval",action='store_true',help='')
     parser.add_argument("--pretrain_mask_rate", type=float, default=None, help='')
     # train learn conf
@@ -138,8 +138,8 @@ def main():
             print_rank_0(f'Use {data_path} now',args.global_rank)
             data = joblib.load(os.path.join(data_path))
             trainData, valData, _, _ = train_test_split(data,np.ones(data.shape[0]),test_size=args.val_rate, random_state=42)
-            TrDataset = ERA5(trainData,num_patches,args.pretrain,args.target_num_patches,PadMask,args.per_var_patch_side,args.pretrain_mask_rate)
-            ValDataset = ERA5(valData,num_patches,args.pretrain,args.target_num_patches,PadMask,args.per_var_patch_side,args.pretrain_mask_rate) 
+            TrDataset = ERA5(trainData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.per_var_patch_side,args.pretrain_mask_rate)
+            ValDataset = ERA5(valData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.per_var_patch_side,args.pretrain_mask_rate) 
             if args.local_rank == -1:
                 train_sampler = RandomSampler(TrDataset)
                 eval_sampler = SequentialSampler(ValDataset)
