@@ -193,11 +193,11 @@ def main():
                     end_log_time = time.time()
                     log_time = end_log_time-start_log_time
                     _loss = sum(training_step_losses)/len(training_step_losses)
-                    _log_step = (epoch*len_train_dataloader)+stepInEp+1
-                    _speed = (log_time)/((epoch*len_train_dataloader)+stepInEp+1)
-                    _train_schedule = ((epoch*len_train_dataloader)+stepInEp+1)/(args.num_train_epochs*len_train_dataloader)
-                    _all_to_consume = (log_time)/(((epoch*len_train_dataloader)+stepInEp+1)/(args.num_train_epochs*len_train_dataloader))
-                    _estimated_to_consume = ((log_time)/(((epoch*len_train_dataloader)+stepInEp+1)/(args.num_train_epochs*len_train_dataloader)))*(1-(((epoch*len_train_dataloader)+stepInEp+1)/(args.num_train_epochs*len_train_dataloader)))
+                    _log_step = (epoch*len_train_dataloader)+stepInEp
+                    _speed = (log_time)/((epoch*len_train_dataloader)+stepInEp)
+                    _train_schedule = ((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)
+                    _all_to_consume = (log_time)/(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader))
+                    _estimated_to_consume = ((log_time)/(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))*(1-(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))
                     print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train loss {_loss}, log_step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
                     just_show(reconstructed_pixel_values,sample,patch_size,args.per_var_patch_side,args.data_output_path)
                     training_step_losses = []
