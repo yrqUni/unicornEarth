@@ -14,7 +14,6 @@ class ERA5(Dataset):
         self.pretrain_mask_rate = pretrain_mask_rate 
     def __len__(self):
         return len(self.data)
-
     def __getitem__(self, idx):
         sample = self.data[idx][np.newaxis,:,:]
         if self.train_stage=='PT1':
