@@ -1,15 +1,15 @@
 #!/bin/bash
 
 MODE=PT
-OUTPUT_PATH=./Exp/1/$MODE
+OUTPUT_PATH=./Exp/2/$MODE
 mkdir -p $OUTPUT_PATH
 
 # 16 128 768 6*6 target mask rate ((128/16)^2)/((768/16)^2) 0.278
 # deepspeed main.py \
 # deepspeed --hostfile=host main.py \
-deepspeed --hostfile=host main.py \
-   --data_sample_input_path /public/home/hydeng/Workspace/yrqUni/unicornEarth/DATA/Merge/ \
-   --data_padmask_input_path /public/home/hydeng/Workspace/yrqUni/unicornEarth/DATA/PadMask/ \
+deepspeed --hostfile=host1 main.py \
+   --data_sample_input_path /public/home/hydeng/Workspace/yrqUni/unicornEarth/DATA_Demo/Merge/ \
+   --data_padmask_input_path /public/home/hydeng/Workspace/yrqUni/unicornEarth/DATA_Demo/PadMask/ \
    --val_rate 0.1 \
    --pretrain_mask_rate 0.15 \
    --data_info /public/home/hydeng/Workspace/yrqUni/unicornEarth/data/DataInfo \

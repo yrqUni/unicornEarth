@@ -170,7 +170,7 @@ def main():
             # Train!
             print_rank_0("***** Running training *****", args.global_rank)
             if args.do_eval:
-                print_rank_0(f"***** Evaluating, Epoch {0}/{args.num_train_epochs} *****", args.global_rank)
+                print_rank_0(f"***** Evaluating, Epoch {epoch+1}/{args.num_train_epochs} *****", args.global_rank)
                 val_loss,_,_ = evaluation(model, eval_dataloader)
                 print_rank_0(f"val loss: {val_loss}", args.global_rank)
             
@@ -205,7 +205,7 @@ def main():
                     save_hf_format(model, args)
             # Evaluate perplexity on the validation set.
             if args.do_eval:
-                print_rank_0(f"***** Evaluating, Epoch {0}/{args.num_train_epochs} *****", args.global_rank)
+                print_rank_0(f"***** Evaluating, Epoch {epoch+1}/{args.num_train_epochs} *****", args.global_rank)
                 val_loss,_,_ = evaluation(model, eval_dataloader)
                 print_rank_0(f"val loss: {val_loss}", args.global_rank)                
             model.tput_timer.update_epoch_count()
