@@ -127,7 +127,7 @@ def main():
 
     start_log_time = time.time()
     for epoch in range(args.num_train_epochs):
-        
+        stepInEp = 0
         torch.distributed.barrier()
         print_rank_0(f'Use data in list {os.listdir(args.data_sample_input_path)}, len is {len(os.listdir(args.data_sample_input_path))}',args.global_rank)
         P = 0
@@ -174,10 +174,11 @@ def main():
                 val_loss,_,_ = evaluation(model, eval_dataloader)
                 print_rank_0(f"val loss: {val_loss}", args.global_rank)
             
-            print_rank_0(f"Beginning of Epoch {epoch+1}/{args.num_train_epochs}, Total Micro Batches {len(train_dataloader)}", args.global_rank)
+            print_rank_0(f"Beginning of Epoch {epoch+1}/{args.num_train_epochs}, Total Micro Batches {len_train_dataloader}", args.global_rank)
             training_step_losses = []
             model.train()
             for step, batch in enumerate(train_dataloader):
+                stepInEp = stepInEp+1
                 sample = batch['sample'].to(device) # (N, 1, 768, 768)
                 GT = batch['GT'].to(device) # (N, 1, 768, 768)
                 mask = batch['mask'].to(device) # (N, num_patch)
@@ -188,19 +189,19 @@ def main():
                 model.backward(loss2)
                 model.step()
                 training_step_losses.append(loss2)
-                if step%args.log_step == 0:
+                if stepInEp%args.log_step == 0:
                     end_log_time = time.time()
                     log_time = end_log_time-start_log_time
                     _loss = sum(training_step_losses)/len(training_step_losses)
-                    _log_step = (epoch*len(train_dataloader))+step+1
-                    _speed = (log_time)/((epoch*len(train_dataloader))+step+1)
-                    _train_schedule = ((epoch*len(train_dataloader))+step+1)/(args.num_train_epochs*len(train_dataloader))
-                    _all_to_consume = (log_time)/(((epoch*len(train_dataloader))+step+1)/(args.num_train_epochs*len(train_dataloader)))
-                    _estimated_to_consume = ((log_time)/(((epoch*len(train_dataloader))+step+1)/(args.num_train_epochs*len(train_dataloader))))*(1-(((epoch*len(train_dataloader))+step+1)/(args.num_train_epochs*len(train_dataloader))))
-                    print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} step {step} train loss {_loss}, log_step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
+                    _log_step = (epoch*len_train_dataloader)+stepInEp+1
+                    _speed = (log_time)/((epoch*len_train_dataloader)+stepInEp+1)
+                    _train_schedule = ((epoch*len_train_dataloader)+stepInEp+1)/(args.num_train_epochs*len_train_dataloader)
+                    _all_to_consume = (log_time)/(((epoch*len_train_dataloader)+stepInEp+1)/(args.num_train_epochs*len_train_dataloader))
+                    _estimated_to_consume = ((log_time)/(((epoch*len_train_dataloader)+stepInEp+1)/(args.num_train_epochs*len_train_dataloader)))*(1-(((epoch*len_train_dataloader)+stepInEp+1)/(args.num_train_epochs*len_train_dataloader)))
+                    print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train loss {_loss}, log_step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
                     just_show(reconstructed_pixel_values,sample,patch_size,args.per_var_patch_side,args.data_output_path)
                     training_step_losses = []
-                if step%args.save_step == 0 and args.global_rank == 0 and args.ckpt_output_dir is not None:
+                if stepInEp%args.save_step == 0 and args.global_rank == 0 and args.ckpt_output_dir is not None:
                     save_hf_format(model, args)
             # Evaluate perplexity on the validation set.
             if args.do_eval:
