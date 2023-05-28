@@ -1,22 +1,23 @@
 #!/bin/bash
 
-MODE=PT2
-OUTPUT_PATH=./Exp/2/$MODE
+MODE=PT1
+OUTPUT_PATH=./Exp/E-SwinV1-1/$MODE
 mkdir -p $OUTPUT_PATH
 
 # 16 128 768 6*6 target mask rate ((128/16)^2)/((768/16)^2) 0.278
 # deepspeed main.py \
 # deepspeed --hostfile=host main.py \
-deepspeed --hostfile=host main.py \
-   --data_sample_input_path /public/home/hydeng/Workspace/yrqUni/unicornEarth/DATA_Demo/Merge/ \
-   --data_padmask_input_path /public/home/hydeng/Workspace/yrqUni/unicornEarth/DATA_Demo/PadMask/ \
+deepspeed main.py \
+   --data_sample_input_path ./DATA_Demo/Merge/ \
+   --data_padmask_input_path ./DATA_Demo/PadMask/ \
    --val_rate 0.1 \
    --pretrain_mask_rate 0.15 \
-   --data_info /public/home/hydeng/Workspace/yrqUni/unicornEarth/data/DataInfo \
-   --target_num_patches 4096 \
-   --patch_per_var_side 2 \
-   --pretrain_model /public/home/hydeng/Workspace/yrqUni/unicornEarth/Exp/2/PT1 \
-   --train_stage PT2 \
+   --data_info ./data/DataInfo \
+   --target_num_patches 1024 \
+   --patch_per_var_side 4 \
+   --model SwinV1 \
+   --init_model unicornEarth-SwinV2-base \
+   --train_stage PT1 \
    --ckpt_output_dir $OUTPUT_PATH \
    --data_output_path $OUTPUT_PATH \
    --seed 1017 \
@@ -29,4 +30,7 @@ deepspeed --hostfile=host main.py \
    --gradient_accumulation_steps 1 \
    --lr_scheduler_type cosine \
    --num_warmup_steps 0 \
+   --zero_stage 2 \
+   --use_fp16 \
+   --offload \
    &> $OUTPUT_PATH/train.log

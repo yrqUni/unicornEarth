@@ -19,7 +19,7 @@ from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from utils.utils import print_rank_0, set_random_seed, get_all_reduce_mean, get_optimizer_grouped_parameters, save_hf_format, save_zero_three_model, just_show
 from utils.ds_utils import get_train_ds_config
 from data import ERA5
-from model import create_Init_model, create_from_PT_model
+from model import create_Init_ViT_model, create_from_PT_ViT_model, create_Init_SwinTransV2_model, create_from_PT_SwinTransV2_model
 from lossFun import mask_l1_loss
 
 def parse_args():
@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument("--target_num_patches",type=int,default=64,help='')
     parser.add_argument("--patch_per_var_side",type=int,default=8,help='var side / patch side')
     # model init
+    parser.add_argument("--model",type=str,default=None,help='ViT SwinV1')
     parser.add_argument("--init_model",type=str,default='unicornEarth',help='')
     parser.add_argument("--pretrain_model",type=str,default=None,help='')
     # train conf
@@ -92,14 +93,19 @@ def main():
     set_random_seed(args.seed)
 
     torch.distributed.barrier()
-
-    if args.pretrain_model!=None:
-        model = create_from_PT_model(args.pretrain_model, disable_dropout=args.disable_dropout)
-    if args.pretrain_model==None:
-        model = create_Init_model(args.init_model, disable_dropout=args.disable_dropout)
+    if args.model=='ViT':
+        if args.pretrain_model!=None:
+            model = create_from_PT_ViT_model(args.pretrain_model, disable_dropout=args.disable_dropout)
+        if args.pretrain_model==None:
+            model = create_Init_ViT_model(args.init_model, disable_dropout=args.disable_dropout)
+    if args.model=='SwinV1':
+        if args.pretrain_model!=None:
+            model = create_from_PT_SwinTransV2_model(args.pretrain_model, disable_dropout=args.disable_dropout)
+        if args.pretrain_model==None:
+            model = create_Init_SwinTransV2_model(args.init_model, disable_dropout=args.disable_dropout)
     num_patches = (model.config.image_size // model.config.patch_size) ** 2
     patch_size = model.config.patch_size
-
+    
     mask_l1_loss_fn = mask_l1_loss(model.config.patch_size, model.config.image_size, model.config.num_channels)
 
     optimizer_grouped_parameters = get_optimizer_grouped_parameters(model, args.weight_decay)
@@ -154,9 +160,9 @@ def main():
                 model.eval()
                 losses = 0
                 for step, batch in enumerate(eval_dataloader):
-                    sample = batch['sample'].to(device) # (N, 1, 768, 768)
-                    GT = batch['GT'].to(device) # (N, 1, 768, 768)
-                    mask = batch['mask'].to(device) # (N, num_patch)
+                    sample = batch['sample'].float().to(device) # (N, 1, 768, 768)
+                    GT = batch['GT'].float().to(device) # (N, 1, 768, 768)
+                    mask = batch['mask'].float().to(device) # (N, num_patch)
                     # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
                     with torch.no_grad():
                         if 'FT' in args.train_stage:
@@ -181,9 +187,9 @@ def main():
             model.train()
             for step, batch in enumerate(train_dataloader):
                 stepInEp = stepInEp+1
-                sample = batch['sample'].to(device) # (N, 1, 768, 768)
-                GT = batch['GT'].to(device) # (N, 1, 768, 768)
-                mask = batch['mask'].to(device) # (N, num_patch)
+                sample = batch['sample'].float().to(device) # (N, 1, 768, 768)
+                GT = batch['GT'].float().to(device) # (N, 1, 768, 768)
+                mask = batch['mask'].float().to(device) # (N, num_patch)
                 # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
                 if 'FT' in args.train_stage:
                     none_mask = batch['none_mask'].to(device) # (N, num_patch)
