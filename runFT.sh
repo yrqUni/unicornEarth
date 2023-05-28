@@ -14,7 +14,7 @@ deepspeed --hostfile=host main.py \
    --pretrain_mask_rate 0.15 \
    --data_info ./data/DataInfo \
    --target_num_patches 1024 \
-   --patch_per_var_side 4 \
+   --patch_per_var_side 32 \
    --model SwinV1 \
    --pretrain_model ./Exp/E-SwinV1-1/PT2 \
    --train_stage FT \
