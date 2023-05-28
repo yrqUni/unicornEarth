@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--val_rate', type=float, default=None, help='')
     parser.add_argument('--data_info', type=str, default='/public/home/hydeng/Workspace/yrqUni/unicornEarth/data/DataInfo', help='')
     parser.add_argument("--target_num_patches",type=int,default=64,help='')
-    parser.add_argument("--per_var_patch_side",type=int,default=8,help='var side / patch side')
+    parser.add_argument("--patch_per_var_side",type=int,default=8,help='var side / patch side')
     # model init
     parser.add_argument("--init_model",type=str,default='unicornEarth',help='')
     parser.add_argument("--pretrain_model",type=str,default=None,help='')
@@ -138,8 +138,8 @@ def main():
             print_rank_0(f'Use {data_path} now',args.global_rank)
             data = joblib.load(os.path.join(data_path))
             trainData, valData, _, _ = train_test_split(data,np.ones(data.shape[0]),test_size=args.val_rate, random_state=args.seed, shuffle=False)
-            TrDataset = ERA5(trainData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.per_var_patch_side,args.pretrain_mask_rate)
-            ValDataset = ERA5(valData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.per_var_patch_side,args.pretrain_mask_rate) 
+            TrDataset = ERA5(trainData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.patch_per_var_side,args.pretrain_mask_rate)
+            ValDataset = ERA5(valData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.patch_per_var_side,args.pretrain_mask_rate) 
             if args.local_rank == -1:
                 train_sampler = RandomSampler(TrDataset)
                 eval_sampler = SequentialSampler(ValDataset)
@@ -206,7 +206,7 @@ def main():
                     _estimated_to_consume = ((log_time)/(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))*(1-(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))
                     print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train loss {_loss}, log_step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
                     if args.global_rank==0:
-                        just_show(reconstructed_pixel_values,sample,patch_size,args.per_var_patch_side,args.data_output_path)
+                        just_show(reconstructed_pixel_values,sample,patch_size,args.patch_per_var_side,args.data_output_path)
                     training_step_losses = []
                 if stepInEp%args.save_step == 0 and args.global_rank == 0 and args.ckpt_output_dir is not None:
                     save_hf_format(model, args)

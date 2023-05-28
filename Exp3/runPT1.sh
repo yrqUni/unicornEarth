@@ -14,7 +14,7 @@ deepspeed --hostfile=host main.py \
    --pretrain_mask_rate 0.5 \
    --data_info /public/home/hydeng/Workspace/yrqUni/unicornEarth/data/DataInfo \
    --target_num_patches 4096 \
-   --per_var_patch_side 2 \
+   --patch_per_var_side 2 \
    --init_model unicornEarth-base \
    --train_stage PT1 \
    --ckpt_output_dir $OUTPUT_PATH \
