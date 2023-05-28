@@ -38,7 +38,7 @@ class ERA5(Dataset):
             bool_masked_pos[:target_num_patches_side,:target_num_patches_side] = 1 
             bool_masked_pos = bool_masked_pos.flatten()
             bool_masked_pos = bool_masked_pos.astype(bool)
-        none_masked = np.zeros((num_patches_side,num_patches_side))
+        none_masked = np.zeros((num_patches_side,num_patches_side)).flatten()
         return {'sample':sample[:,0,:,:], # (N, 1, 768, 768)
                 'GT':sample[:,1,:,:], 
                 'mask':bool_masked_pos,
