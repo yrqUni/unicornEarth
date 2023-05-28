@@ -21,8 +21,8 @@ deepspeed main.py \
    --ckpt_output_dir $OUTPUT_PATH \
    --data_output_path $OUTPUT_PATH \
    --seed 1017 \
-   --per_device_train_batch_size 16 \
-   --per_device_eval_batch_size 32 \
+   --per_device_train_batch_size 8 \
+   --per_device_eval_batch_size 16 \
    --do_eval \
    --learning_rate 5e-4 \
    --weight_decay 0.1 \

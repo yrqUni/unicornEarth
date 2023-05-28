@@ -16,7 +16,7 @@ deepspeed --hostfile=host main.py \
    --target_num_patches 1024 \
    --patch_per_var_side 4 \
    --model SwinV1 \
-   --pretrain_model ./Exp/E-SwinV2-1/PT2 \
+   --pretrain_model ./Exp/E-SwinV1-1/PT2 \
    --train_stage FT \
    --ckpt_output_dir $OUTPUT_PATH \
    --data_output_path $OUTPUT_PATH \

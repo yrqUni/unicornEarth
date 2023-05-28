@@ -16,7 +16,7 @@ deepspeed main.py \
    --target_num_patches 1024 \
    --patch_per_var_side 4 \
    --model SwinV1 \
-   --init_model unicornEarth-SwinV2-base \
+   --init_model unicornEarth-SwinV1-base \
    --train_stage PT1 \
    --ckpt_output_dir $OUTPUT_PATH \
    --data_output_path $OUTPUT_PATH \
@@ -30,7 +30,4 @@ deepspeed main.py \
    --gradient_accumulation_steps 1 \
    --lr_scheduler_type cosine \
    --num_warmup_steps 0 \
-   --zero_stage 2 \
-   --use_fp16 \
-   --offload \
    &> $OUTPUT_PATH/train.log
