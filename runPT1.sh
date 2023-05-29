@@ -11,7 +11,7 @@ deepspeed main.py \
    --data_sample_input_path ./DATA_Demo/Merge/ \
    --data_padmask_input_path ./DATA_Demo/PadMask/ \
    --val_rate 0.1 \
-   --pretrain_mask_rate 0.15 \
+   --pretrain_mask_rate 0.5 \
    --data_info ./data/DataInfo \
    --target_num_patches 1024 \
    --patch_per_var_side 32 \
@@ -21,8 +21,8 @@ deepspeed main.py \
    --ckpt_output_dir $OUTPUT_PATH \
    --data_output_path $OUTPUT_PATH \
    --seed 1017 \
-   --per_device_train_batch_size 8 \
-   --per_device_eval_batch_size 16 \
+   --per_device_train_batch_size 1 \
+   --per_device_eval_batch_size 2 \
    --do_eval \
    --learning_rate 5e-4 \
    --weight_decay 0.1 \

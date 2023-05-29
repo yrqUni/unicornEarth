@@ -162,7 +162,7 @@ def main():
                 for step, batch in enumerate(eval_dataloader):
                     sample = batch['sample'].float().to(device) # (N, 1, 768, 768)
                     GT = batch['GT'].float().to(device) # (N, 1, 768, 768)
-                    mask = batch['mask'].float().to(device) # (N, num_patch)
+                    mask = batch['mask'].to(device) # (N, num_patch)
                     # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
                     with torch.no_grad():
                         if 'FT' in args.train_stage:
@@ -189,7 +189,7 @@ def main():
                 stepInEp = stepInEp+1
                 sample = batch['sample'].float().to(device) # (N, 1, 768, 768)
                 GT = batch['GT'].float().to(device) # (N, 1, 768, 768)
-                mask = batch['mask'].float().to(device) # (N, num_patch)
+                mask = batch['mask'].to(device) # (N, num_patch)
                 # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
                 if 'FT' in args.train_stage:
                     none_mask = batch['none_mask'].to(device) # (N, num_patch)
