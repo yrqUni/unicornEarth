@@ -156,7 +156,7 @@ def main():
             eval_dataloader = DataLoader(ValDataset, sampler=eval_sampler, batch_size=args.per_device_eval_batch_size)
             torch.distributed.barrier()
 
-            def evaluation(model, eval_dataloader):
+            def evaluation(args, model, eval_dataloader):
                 model.eval()
                 losses = 0
                 for step, batch in enumerate(eval_dataloader):
@@ -175,11 +175,13 @@ def main():
                     losses += loss2.float()
                 losses = losses / (step + 1)
                 losses = get_all_reduce_mean(losses).item()
+                if args.global_rank==0:
+                    just_show(reconstructed_pixel_values,sample,patch_size,args.patch_per_var_side,f'{args.data_output_path}/valVis/')
                 return losses, reconstructed_pixel_values, sample
 
             # Train!
             if args.do_eval:
-                val_loss,_,_ = evaluation(model, eval_dataloader)
+                val_loss,_,_ = evaluation(args, model, eval_dataloader)
                 print_rank_0(f"***** Beginning epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} ***** val loss: {val_loss} ", args.global_rank)
 
             print_rank_0(f"Epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))}, Total Micro Batches {len_train_dataloader}", args.global_rank)
@@ -212,13 +214,13 @@ def main():
                     _estimated_to_consume = ((log_time)/(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))*(1-(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))
                     print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train loss {_loss}, log_step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
                     if args.global_rank==0:
-                        just_show(reconstructed_pixel_values,sample,patch_size,args.patch_per_var_side,args.data_output_path)
+                        just_show(reconstructed_pixel_values,sample,patch_size,args.patch_per_var_side,f'{args.data_output_path}/trainVis/')
                     training_step_losses = []
                 if stepInEp%args.save_step == 0 and args.global_rank == 0 and args.ckpt_output_dir is not None:
                     save_hf_format(model, args)
             # Evaluate perplexity on the validation set.
             if args.do_eval:
-                val_loss,_,_ = evaluation(model, eval_dataloader)
+                val_loss,_,_ = evaluation(args, model, eval_dataloader)
                 print_rank_0(f"***** End epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} ***** val loss: {val_loss} ", args.global_rank)                
             model.tput_timer.update_epoch_count()
 

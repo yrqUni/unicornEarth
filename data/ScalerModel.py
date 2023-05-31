@@ -15,14 +15,14 @@ for root, dirs, files in os.walk(args.inputPath, topdown=False):
     for file in files:
         if file==args.var:
             dataPaths.append(os.path.join(root, file))
-meanLs = []
+sumLs = []
 sizeLs = []
 for dataPath in tqdm(dataPaths):
     data = joblib.load(dataPath)
-    meanLs.append(data.mean())
+    sumLs.append(data.sum())
     sizeLs.append(data.size)
-MeanAll = sum(meanLs)/len(meanLs)
 SizeAll = sum(sizeLs)
+MeanAll = sum(sumLs)/SizeAll
 SqrDiffSumLs = []
 for dataPath in tqdm(dataPaths):
     data = joblib.load(dataPath)
