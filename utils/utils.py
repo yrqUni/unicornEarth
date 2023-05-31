@@ -115,6 +115,7 @@ def save_hf_format(model, args, sub_folder=""):
 
 
 def just_show(reconstructed_pixel_values,sample,patch_size,per_var_patch_side,output_path):
+    os.makedirs(os.path.abspath(os.path.dirname(output_path)), exist_ok=True)
     luck1 = random.randint(0,sample.shape[0]-1)
     luck2 = random.randint(0,sample.shape[1]-1)
     plt.matshow(np.squeeze(reconstructed_pixel_values[luck1,luck2,:patch_size*per_var_patch_side,:patch_size*per_var_patch_side].cpu().detach().numpy()))

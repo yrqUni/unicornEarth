@@ -1,4 +1,4 @@
 import joblib
 
-data = joblib.load('DataInfo')
+data = joblib.load('DataInfoAll')
 print(data)
