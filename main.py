@@ -20,17 +20,19 @@ from utils.utils import print_rank_0, set_random_seed, get_all_reduce_mean, get_
 from utils.ds_utils import get_train_ds_config
 from data import ERA5
 from model import create_Init_ViT_model, create_from_PT_ViT_model, create_Init_SwinTransV2_model, create_from_PT_SwinTransV2_model
-from lossFun import mask_l1_loss
+from lossFun import mask_l1_loss, ssim, ms_ssim, SSIM, MS_SSIM
 
 def parse_args():
     parser = argparse.ArgumentParser(description="unicornEarth")
     # input 
-    parser.add_argument('--data_sample_input_path', type=str, default='/public/home/hydeng/Workspace/yrqUni/unicornEarth/DATA/Merge/', help='')
-    parser.add_argument('--data_padmask_input_path', type=str, default='/public/home/hydeng/Workspace/yrqUni/unicornEarth/DATA/PadMask/', help='')
+    parser.add_argument('--data_sample_input_path', type=str, default='../DATA/Merge/', help='')
+    parser.add_argument('--data_padmask_input_path', type=str, default='../DATA/PadMask/', help='')
     parser.add_argument('--val_rate', type=float, default=None, help='')
-    parser.add_argument('--data_info', type=str, default='/public/home/hydeng/Workspace/yrqUni/unicornEarth/data/DataInfo', help='')
+    parser.add_argument('--data_info', type=str, default='./data/DataInfo', help='')
     parser.add_argument("--target_num_patches",type=int,default=64,help='')
     parser.add_argument("--patch_per_var_side",type=int,default=8,help='var side / patch side')
+    parser.add_argument("--stats_path",type=str,default='./data/Stats/',help='')
+    parser.add_argument("--target_var",type=str,default='TCWV',help='')
     # model init
     parser.add_argument("--model",type=str,default=None,help='ViT SwinV1')
     parser.add_argument("--init_model",type=str,default='unicornEarth',help='')
@@ -41,6 +43,8 @@ def parse_args():
     parser.add_argument("--train_stage", type=str, default=None, help='')
     parser.add_argument("--do_eval",action='store_true',help='')
     parser.add_argument("--pretrain_mask_rate", type=float, default=None, help='')
+    parser.add_argument("--loss_l1_rate", type=float, default=None, help='')
+    parser.add_argument("--loss_ms_ssim_rate", type=float, default=None, help='')
     # train learn conf
     parser.add_argument("--weight_decay",type=float,default=0.,help='')
     parser.add_argument("--num_train_epochs",type=int,default=1000,help='')
@@ -106,13 +110,6 @@ def main():
     num_patches = (model.config.image_size // model.config.patch_size) ** 2
     patch_size = model.config.patch_size
     
-    mask_l1_loss_fn = mask_l1_loss(model.config.patch_size, model.config.image_size, model.config.num_channels)
-
-    optimizer_grouped_parameters = get_optimizer_grouped_parameters(model, args.weight_decay)
-
-    AdamOptimizer = DeepSpeedCPUAdam if args.offload else FusedAdam
-    optimizer = AdamOptimizer(optimizer_grouped_parameters, lr=args.learning_rate, betas=(0.9, 0.95))
-
     len_data = 0
     data_info = joblib.load(args.data_info)
     for infos_key in data_info['sample']:
@@ -120,6 +117,17 @@ def main():
         len_data = len_data+infos[0]
     len_train_dataloader = int(len_data*(1-args.val_rate))
     print_rank_0(f'All len train dataloader:{len_train_dataloader}',args.global_rank)
+
+    target_data_stats = joblib.load(f'{args.stats_path}/{args.target_var}')
+    print_rank_0(f'target var is {args.target_var}, Min is {target_data_stats["Min"]}, Max is {target_data_stats["Max"]}',args.global_rank)
+
+    mask_l1_loss_fn = mask_l1_loss(model.config.patch_size, model.config.image_size, model.config.num_channels)
+    ms_ssim_loss_fn = MS_SSIM(data_range=target_data_stats["Max"], size_average=True, channel=1)
+
+    optimizer_grouped_parameters = get_optimizer_grouped_parameters(model, args.weight_decay)
+
+    AdamOptimizer = DeepSpeedCPUAdam if args.offload else FusedAdam
+    optimizer = AdamOptimizer(optimizer_grouped_parameters, lr=args.learning_rate, betas=(0.9, 0.95))
 
     num_update_steps_per_epoch = math.ceil(len_train_dataloader / args.gradient_accumulation_steps)
     lr_scheduler = get_scheduler(name=args.lr_scheduler_type, optimizer=optimizer, 
@@ -185,7 +193,9 @@ def main():
                 print_rank_0(f"***** Beginning epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} ***** val loss: {val_loss} ", args.global_rank)
 
             print_rank_0(f"Epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))}, Total Micro Batches {len_train_dataloader}", args.global_rank)
-            training_step_losses = []
+            training_step_losses_l1 = []
+            training_step_losses_ms_ssim = []
+            training_step_losses_mix = []
             model.train()
             for step, batch in enumerate(train_dataloader):
                 stepInEp = stepInEp+1
@@ -196,26 +206,42 @@ def main():
                 if 'FT' in args.train_stage:
                     none_mask = batch['none_mask'].to(device) # (N, num_patch)
                     outputs = model(sample, bool_masked_pos=none_mask)
+                    _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
+                    loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
+                    loss_ms_ssim = 1-ms_ssim_loss_fn(reconstructed_pixel_values,GT)
+                    loss_mix = args.loss_l1_rate*loss_l1+args.loss_ms_ssim_rate*loss_ms_ssim
+                    model.backward(loss_mix)
+                    model.step()
+                    training_step_losses_l1.append(loss_l1)
+                    training_step_losses_ms_ssim.append(loss_ms_ssim)
+                    training_step_losses_mix.append(loss_mix)
                 if 'PT' in args.train_stage:
                     outputs = model(sample, bool_masked_pos=mask)
-                loss1, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
-                loss2 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
-                model.backward(loss2)
-                model.step()
-                training_step_losses.append(loss2)
+                    _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
+                    loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
+                    model.backward(loss_l1)
+                    model.step()
+                    training_step_losses_l1.append(loss_l1)
                 if stepInEp%args.log_step == 0:
                     end_log_time = time.time()
                     log_time = end_log_time-start_log_time
-                    _loss = sum(training_step_losses)/len(training_step_losses)
                     _log_step = (epoch*len_train_dataloader)+stepInEp
                     _speed = (log_time)/((epoch*len_train_dataloader)+stepInEp)
                     _train_schedule = ((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)
                     _all_to_consume = (log_time)/(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader))
                     _estimated_to_consume = ((log_time)/(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))*(1-(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))
-                    print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train loss {_loss}, log_step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
+                    if 'PT' in args.train_stage:
+                        _loss_l1 = sum(training_step_losses_l1)/len(training_step_losses_l1)
+                        print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train l1_loss {_loss_l1}, log step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
+                    if 'FT' in args.train_stage:
+                        _loss_l1 = sum(training_step_losses_l1)/len(training_step_losses_l1)
+                        _loss_ms_ssim = sum(training_step_losses_ms_ssim)/len(training_step_losses_ms_ssim)
+                        _loss_mix = sum(training_step_losses_mix)/len(training_step_losses_mix)
+                        print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train l1_loss {_loss_l1}, train mix_loss {_loss_mix}({args.loss_l1_rate}*loss_l1+{args.loss_ms_ssim_rate}*loss_ms_ssim), train sm_ssim_loss {_loss_ms_ssim}, log step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
                     if args.global_rank==0:
                         just_show(reconstructed_pixel_values,sample,patch_size,args.patch_per_var_side,f'{args.data_output_path}/trainVis/')
-                    training_step_losses = []
+                    training_step_losses_l1 = []
+                    training_step_losses_ms_ssim = []
                 if stepInEp%args.save_step == 0 and args.global_rank == 0 and args.ckpt_output_dir is not None:
                     save_hf_format(model, args)
             # Evaluate perplexity on the validation set.
