@@ -108,6 +108,7 @@ def main():
         if args.pretrain_model==None:
             model = create_Init_SwinTransV2_model(args.init_model, disable_dropout=args.disable_dropout)
     num_patches = (model.config.image_size // model.config.patch_size) ** 2
+    image_size = model.config.image_size 
     patch_size = model.config.patch_size
     
     len_data = 0
@@ -143,13 +144,13 @@ def main():
     for epoch in range(args.num_train_epochs):
         stepInEp = 0
         torch.distributed.barrier()
-        print_rank_0(f'Use data in list {os.listdir(args.data_sample_input_path)}, len is {len(os.listdir(args.data_sample_input_path))}',args.global_rank)
+        print_rank_0(f'################ Use data in list {os.listdir(args.data_sample_input_path)}, len is {len(os.listdir(args.data_sample_input_path))} ################',args.global_rank)
         P = 0
         for data_part in os.listdir(args.data_sample_input_path):
             P = P+1
             data_path = f'{args.data_sample_input_path}/{data_part}'
             PadMask = joblib.load(f'{args.data_padmask_input_path}/{data_part}')
-            print_rank_0(f'Use {data_path} now',args.global_rank)
+            print_rank_0(f'################ Use {data_path} now ################',args.global_rank)
             data = joblib.load(os.path.join(data_path))
             trainData, valData, _, _ = train_test_split(data,np.ones(data.shape[0]),test_size=args.val_rate, random_state=args.seed, shuffle=False)
             TrDataset = ERA5(trainData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.patch_per_var_side,args.pretrain_mask_rate)
@@ -166,33 +167,54 @@ def main():
 
             def evaluation(args, model, eval_dataloader):
                 model.eval()
-                losses = 0
+                losses_l1 = 0
+                losses_ms_ssim = 0
+                losses_mix = 0
                 for step, batch in enumerate(eval_dataloader):
                     sample = batch['sample'].float().to(device) # (N, 1, 768, 768)
                     GT = batch['GT'].float().to(device) # (N, 1, 768, 768)
                     mask = batch['mask'].to(device) # (N, num_patch)
+                    size = image_size//patch_size
+                    mask_expand = mask.reshape(-1, size, size)
+                    mask_expand = (mask_expand.repeat_interleave(patch_size, 1).repeat_interleave(patch_size, 2).unsqueeze(1).contiguous()).float().to(device)
                     # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
                     with torch.no_grad():
                         if 'FT' in args.train_stage:
                             none_mask = batch['none_mask'].to(device) # (N, num_patch)
                             outputs = model(sample, bool_masked_pos=none_mask)
+                            _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
+                            loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
+                            loss_ms_ssim = 1-ms_ssim_loss_fn(reconstructed_pixel_values*mask_expand,GT*mask_expand)
+                            loss_mix = args.loss_l1_rate*loss_l1+args.loss_ms_ssim_rate*loss_ms_ssim
                         if 'PT' in args.train_stage:
                             outputs = model(sample, bool_masked_pos=mask)
-                    loss1, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
-                    loss2 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
-                    losses += loss2.float()
-                losses = losses / (step + 1)
-                losses = get_all_reduce_mean(losses).item()
+                            _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
+                            loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
+                    losses_l1 += loss_l1.float()
+                    losses_ms_ssim += loss_ms_ssim.float()
+                    losses_mix += loss_mix.float()
+                losses_l1 = losses_l1 / (step + 1)
+                losses_l1 = get_all_reduce_mean(losses_l1).item()
+                losses_ms_ssim = losses_ms_ssim / (step + 1)
+                losses_ms_ssim = get_all_reduce_mean(losses_ms_ssim).item()
+                losses_mix = losses_mix / (step + 1)
+                losses_mix = get_all_reduce_mean(losses_mix).item()
                 if args.global_rank==0:
                     just_show(reconstructed_pixel_values,sample,patch_size,args.patch_per_var_side,f'{args.data_output_path}/valVis/')
-                return losses, reconstructed_pixel_values, sample
+                if 'PT' in args.train_stage:
+                    return losses_l1, reconstructed_pixel_values, sample
+                if 'FT' in args.train_stage:
+                    return losses_l1, losses_ms_ssim, losses_mix, reconstructed_pixel_values, sample
 
             # Train!
             if args.do_eval:
-                val_loss,_,_ = evaluation(args, model, eval_dataloader)
-                print_rank_0(f"***** Beginning epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} ***** val loss: {val_loss} ", args.global_rank)
-
-            print_rank_0(f"Epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))}, Total Micro Batches {len_train_dataloader}", args.global_rank)
+                if 'PT' in args.train_stage:
+                    losses_l1, _, _ = evaluation(args, model, eval_dataloader)
+                    print_rank_0(f">>>>>>>>>>>>>>>> Beginning epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} val losses_l1: {losses_l1} <<<<<<<<<<<<<<<<", args.global_rank)
+                if 'FT' in args.train_stage:
+                    losses_l1, losses_ms_ssim, losses_mix, _, _ = evaluation(args, model, eval_dataloader)
+                    print_rank_0(f">>>>>>>>>>>>>>>> Beginning epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} val losses_l1 {losses_l1}, val losses_ms_ssim {losses_ms_ssim}, val losses_mix {losses_mix} <<<<<<<<<<<<<<<<", args.global_rank)
+            print_rank_0(f"################ Epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))}, Total Micro Batches {len_train_dataloader} ################", args.global_rank)
             training_step_losses_l1 = []
             training_step_losses_ms_ssim = []
             training_step_losses_mix = []
@@ -202,13 +224,16 @@ def main():
                 sample = batch['sample'].float().to(device) # (N, 1, 768, 768)
                 GT = batch['GT'].float().to(device) # (N, 1, 768, 768)
                 mask = batch['mask'].to(device) # (N, num_patch)
+                size = image_size//patch_size
+                mask_expand = mask.reshape(-1, size, size)
+                mask_expand = (mask_expand.repeat_interleave(patch_size, 1).repeat_interleave(patch_size, 2).unsqueeze(1).contiguous()).float().to(device)
                 # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
                 if 'FT' in args.train_stage:
                     none_mask = batch['none_mask'].to(device) # (N, num_patch)
                     outputs = model(sample, bool_masked_pos=none_mask)
                     _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
                     loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
-                    loss_ms_ssim = 1-ms_ssim_loss_fn(reconstructed_pixel_values,GT)
+                    loss_ms_ssim = 1-ms_ssim_loss_fn(reconstructed_pixel_values*mask_expand,GT*mask_expand)
                     loss_mix = args.loss_l1_rate*loss_l1+args.loss_ms_ssim_rate*loss_ms_ssim
                     model.backward(loss_mix)
                     model.step()
@@ -246,9 +271,13 @@ def main():
                     save_hf_format(model, args)
             # Evaluate perplexity on the validation set.
             if args.do_eval:
-                val_loss,_,_ = evaluation(args, model, eval_dataloader)
-                print_rank_0(f"***** End epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} ***** val loss: {val_loss} ", args.global_rank)                
-            model.tput_timer.update_epoch_count()
+                if 'PT' in args.train_stage:
+                    losses_l1, _, _ = evaluation(args, model, eval_dataloader)
+                    print_rank_0(f"<<<<<<<<<<<<<<<< End epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} val losses_l1: {losses_l1} >>>>>>>>>>>>>>>>", args.global_rank)
+                if 'FT' in args.train_stage:
+                    losses_l1, losses_ms_ssim, losses_mix, _, _ = evaluation(args, model, eval_dataloader)
+                    print_rank_0(f"<<<<<<<<<<<<<<<< End epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} val losses_l1 {losses_l1}, val losses_ms_ssim {losses_ms_ssim}, val losses_mix {losses_mix} >>>>>>>>>>>>>>>>", args.global_rank)
+        model.tput_timer.update_epoch_count()
 
     if args.ckpt_output_dir is not None:
         os.makedirs(os.path.abspath(os.path.dirname(args.ckpt_output_dir)), exist_ok=True)
@@ -258,9 +287,10 @@ def main():
         if args.zero_stage == 3:
             # For zero stage 3, each gpu only has a part of the model, so we need a special save function
             save_zero_three_model(model, args.global_rank, args.ckpt_output_dir, zero_stage=args.zero_stage)
+        print_rank_0('saving the final model DONE !!!', args.global_rank)
     
     torch.distributed.barrier()
-    print_rank_0('ALL DONE!!!', args.global_rank)
+    print_rank_0('ALL DONE !!!', args.global_rank)
 
 if __name__ == "__main__":
     main()
