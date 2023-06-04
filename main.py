@@ -116,7 +116,8 @@ def main():
     for infos_key in data_info['sample']:
         infos = data_info['sample'][infos_key]
         len_data = len_data+infos[0]
-    len_train_dataloader = int(len_data*(1-args.val_rate))
+    len_train_data = int(len_data*(1-args.val_rate))
+    len_train_dataloader = len_train_data // (args.per_device_train_batch_size * torch.distributed.get_world_size())
     print_rank_0(f'All len train dataloader:{len_train_dataloader}',args.global_rank)
 
     target_data_stats = joblib.load(f'{args.stats_path}/{args.target_var}')
