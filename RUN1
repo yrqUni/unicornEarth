@@ -7,7 +7,7 @@ mkdir -p $OUTPUT_PATH
 # 16 128 768 6*6 target mask rate ((128/16)^2)/((768/16)^2) 0.278
 # deepspeed mainSingle.py \
 # deepspeed --hostfile=host mainSingle.py \
-deepspeed --hostfile=host1 mainSingle.py \
+deepspeed --hostfile=h1 mainSingle.py \
    --data_sample_input_path ./DATA/Merge/ \
    --data_padmask_input_path ./DATA/PadMask/ \
    --val_rate 0.1 \
@@ -31,7 +31,7 @@ deepspeed --hostfile=host1 mainSingle.py \
    --lr_scheduler_type cosine \
    --num_warmup_steps 0 \
    --loss_l1_rate 1.0 \
-   --loss_ms_ssim_rate 1.0 \
+   --loss_ms_ssim_rate 2.0 \
    --stats_path ./data/Stats/ \
    --target_var TCWV \
    &> $OUTPUT_PATH/train.log
@@ -49,7 +49,7 @@ mkdir -p $OUTPUT_PATH
 # 16 128 768 6*6 target mask rate ((128/16)^2)/((768/16)^2) 0.278
 # deepspeed mainSingle.py \
 # deepspeed --hostfile=host mainSingle.py \
-deepspeed --hostfile=host1 mainSingle.py \
+deepspeed --hostfile=h1 mainSingle.py \
    --data_sample_input_path ./DATA/Merge/ \
    --data_padmask_input_path ./DATA/PadMask/ \
    --val_rate 0.1 \
@@ -73,7 +73,7 @@ deepspeed --hostfile=host1 mainSingle.py \
    --lr_scheduler_type cosine \
    --num_warmup_steps 0 \
    --loss_l1_rate 1.0 \
-   --loss_ms_ssim_rate 1.0 \
+   --loss_ms_ssim_rate 2.0 \
    --stats_path ./data/Stats/ \
    --target_var TCWV \
    &> $OUTPUT_PATH/train.log
@@ -91,7 +91,7 @@ mkdir -p $OUTPUT_PATH
 # 16 128 768 6*6 target mask rate ((128/16)^2)/((768/16)^2) 0.278
 # deepspeed mainSingle.py \
 # deepspeed --hostfile=host mainSingle.py \
-deepspeed --hostfile=host1 mainSingle.py \
+deepspeed --hostfile=h1 mainSingle.py \
    --data_sample_input_path ./DATA/Merge/ \
    --data_padmask_input_path ./DATA/PadMask/ \
    --val_rate 0.1 \
@@ -115,7 +115,7 @@ deepspeed --hostfile=host1 mainSingle.py \
    --lr_scheduler_type cosine \
    --num_warmup_steps 0 \
    --loss_l1_rate 1.0 \
-   --loss_ms_ssim_rate 1.0 \
+   --loss_ms_ssim_rate 2.0 \
    --stats_path ./data/Stats/ \
    --target_var TCWV \
    &> $OUTPUT_PATH/train.log

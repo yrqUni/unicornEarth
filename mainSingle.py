@@ -274,11 +274,11 @@ def main():
                 if stepInEp%args.log_step == 0:
                     end_log_time = time.time()
                     log_time = end_log_time-start_log_time
-                    _log_step = (epoch*len_train_dataloader)+stepInEp
-                    _speed = (log_time)/((epoch*len_train_dataloader)+stepInEp)
-                    _train_schedule = ((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)
-                    _all_to_consume = (log_time)/(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader))
-                    _estimated_to_consume = ((log_time)/(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))*(1-(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))
+                    _log_step = (epoch*len_train_dataloader+1)+stepInEp
+                    _speed = (log_time)/((epoch*len_train_dataloader+1)+stepInEp)
+                    _train_schedule = ((epoch*len_train_dataloader+1)+stepInEp)/(args.num_train_epochs*len_train_dataloader+1)
+                    _all_to_consume = (log_time)/(((epoch*len_train_dataloader+1)+stepInEp)/(args.num_train_epochs*len_train_dataloader+1))
+                    _estimated_to_consume = ((log_time)/(((epoch*len_train_dataloader+1)+stepInEp)/(args.num_train_epochs*len_train_dataloader+1)))*(1-(((epoch*len_train_dataloader+1)+stepInEp)/(args.num_train_epochs*len_train_dataloader+1)))
                     _log_step = get_all_reduce_mean(torch.tensor(_log_step).to(device)).item()
                     _speed = get_all_reduce_mean(torch.tensor(_speed).to(device)).item()
                     _train_schedule = get_all_reduce_mean(torch.tensor(_train_schedule).to(device)).item()
