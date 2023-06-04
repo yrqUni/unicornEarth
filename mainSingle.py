@@ -303,10 +303,10 @@ def main():
                     save_hf_format(model, args)
             # Evaluate perplexity on the validation set.
             if args.do_eval:
-                if 'PT' in args.train_stage:
+                if args.train_stage=='PT1':
                     losses_l1, _, _ = evaluation(args, model, eval_dataloader)
                     print_rank_0(f"<<<<<<<<<<<<<<<< End epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} val losses_l1: {losses_l1} >>>>>>>>>>>>>>>>", args.global_rank)
-                if 'FT' in args.train_stage:
+                if args.train_stage=='FT' or args.train_stage=='PT2':
                     losses_l1, losses_ms_ssim, losses_mix, _, _ = evaluation(args, model, eval_dataloader)
                     print_rank_0(f"<<<<<<<<<<<<<<<< End epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} val losses_l1 {losses_l1}, val losses_ms_ssim {losses_ms_ssim}, val losses_mix {losses_mix} >>>>>>>>>>>>>>>>", args.global_rank)
         model.tput_timer.update_epoch_count()
