@@ -14,7 +14,7 @@ deepspeed --hostfile=host main.py \
    --pretrain_mask_rate 0.15 \
    --data_info ./data/DataInfo \
    --target_num_patches 1024 \
-   --patch_per_var_side 4 \
+   --patch_per_var_side 32 \
    --model SwinV1 \
    --pretrain_model ./Exp/E-SwinV1-1/PT1 \
    --train_stage PT2 \
@@ -30,4 +30,8 @@ deepspeed --hostfile=host main.py \
    --gradient_accumulation_steps 1 \
    --lr_scheduler_type cosine \
    --num_warmup_steps 0 \
+   --loss_l1_rate 1.0 \
+   --loss_ms_ssim_rate 1.0 \
+   --stats_path ./data/Stats/ \
+   --target_var TCWV \
    &> $OUTPUT_PATH/train.log

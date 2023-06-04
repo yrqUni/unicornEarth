@@ -5,7 +5,7 @@ import math
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description="unicornEarth")
-parser.add_argument('--inputPath', type=str, default='../DATA/RAW', help='')
+parser.add_argument('--inputPath', type=str, default='../DATA/Scale', help='')
 parser.add_argument('--outPath', type=str, default='./ScalerModel', help='')
 parser.add_argument('--var', type=str, default=None, help='')
 args = parser.parse_args()

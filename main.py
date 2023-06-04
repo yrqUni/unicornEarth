@@ -179,14 +179,20 @@ def main():
                     mask_expand = (mask_expand.repeat_interleave(patch_size, 1).repeat_interleave(patch_size, 2).unsqueeze(1).contiguous()).float().to(device)
                     # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
                     with torch.no_grad():
-                        if 'FT' in args.train_stage:
+                        if args.train_stage=='FT':
                             none_mask = batch['none_mask'].to(device) # (N, num_patch)
                             outputs = model(sample, bool_masked_pos=none_mask)
                             _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
                             loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
-                            loss_ms_ssim = 1-ms_ssim_loss_fn(reconstructed_pixel_values*mask_expand,GT*mask_expand)
+                            loss_ms_ssim = 1-ms_ssim_loss_fn((reconstructed_pixel_values*mask_expand)[:,:,:patch_size*args.patch_per_var_side,:patch_size*args.patch_per_var_side],(GT*mask_expand)[:,:,:patch_size*args.patch_per_var_side,:patch_size*args.patch_per_var_side])
                             loss_mix = args.loss_l1_rate*loss_l1+args.loss_ms_ssim_rate*loss_ms_ssim
-                        if 'PT' in args.train_stage:
+                        if args.train_stage=='PT2':
+                            outputs = model(sample, bool_masked_pos=mask)
+                            _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
+                            loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
+                            loss_ms_ssim = 1-ms_ssim_loss_fn((reconstructed_pixel_values*mask_expand)[:,:,:patch_size*args.patch_per_var_side,:patch_size*args.patch_per_var_side],(GT*mask_expand)[:,:,:patch_size*args.patch_per_var_side,:patch_size*args.patch_per_var_side])
+                            loss_mix = args.loss_l1_rate*loss_l1+args.loss_ms_ssim_rate*loss_ms_ssim
+                        if args.train_stage=='PT1':
                             outputs = model(sample, bool_masked_pos=mask)
                             _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
                             loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
@@ -228,19 +234,30 @@ def main():
                 mask_expand = mask.reshape(-1, size, size)
                 mask_expand = (mask_expand.repeat_interleave(patch_size, 1).repeat_interleave(patch_size, 2).unsqueeze(1).contiguous()).float().to(device)
                 # pad_mask = batch['pad_mask'].to(device) # (N, num_patch)
-                if 'FT' in args.train_stage:
+                if args.train_stage=='FT':
                     none_mask = batch['none_mask'].to(device) # (N, num_patch)
                     outputs = model(sample, bool_masked_pos=none_mask)
                     _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
                     loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
-                    loss_ms_ssim = 1-ms_ssim_loss_fn(reconstructed_pixel_values*mask_expand,GT*mask_expand)
+                    loss_ms_ssim = 1-ms_ssim_loss_fn((reconstructed_pixel_values*mask_expand)[:,:,:patch_size*args.patch_per_var_side,:patch_size*args.patch_per_var_side],(GT*mask_expand)[:,:,:patch_size*args.patch_per_var_side,:patch_size*args.patch_per_var_side])
                     loss_mix = args.loss_l1_rate*loss_l1+args.loss_ms_ssim_rate*loss_ms_ssim
                     model.backward(loss_mix)
                     model.step()
                     training_step_losses_l1.append(loss_l1)
                     training_step_losses_ms_ssim.append(loss_ms_ssim)
                     training_step_losses_mix.append(loss_mix)
-                if 'PT' in args.train_stage:
+                if args.train_stage=='PT2':
+                    outputs = model(sample, bool_masked_pos=mask)
+                    _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
+                    loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
+                    loss_ms_ssim = 1-ms_ssim_loss_fn((reconstructed_pixel_values*mask_expand)[:,:,:patch_size*args.patch_per_var_side,:patch_size*args.patch_per_var_side],(GT*mask_expand)[:,:,:patch_size*args.patch_per_var_side,:patch_size*args.patch_per_var_side])
+                    loss_mix = args.loss_l1_rate*loss_l1+args.loss_ms_ssim_rate*loss_ms_ssim
+                    model.backward(loss_mix)
+                    model.step()
+                    training_step_losses_l1.append(loss_l1)
+                    training_step_losses_ms_ssim.append(loss_ms_ssim)
+                    training_step_losses_mix.append(loss_mix)
+                if args.train_stage=='PT1':
                     outputs = model(sample, bool_masked_pos=mask)
                     _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
                     loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
@@ -255,13 +272,22 @@ def main():
                     _train_schedule = ((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)
                     _all_to_consume = (log_time)/(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader))
                     _estimated_to_consume = ((log_time)/(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))*(1-(((epoch*len_train_dataloader)+stepInEp)/(args.num_train_epochs*len_train_dataloader)))
-                    if 'PT' in args.train_stage:
+                    _log_step = get_all_reduce_mean(_log_step).item()
+                    _speed = get_all_reduce_mean(_speed).item()
+                    _train_schedule = get_all_reduce_mean(_train_schedule).item()
+                    _all_to_consume = get_all_reduce_mean(_all_to_consume).item()
+                    _estimated_to_consume = get_all_reduce_mean(_estimated_to_consume).item()
+                    if args.train_stage=='PT1':
                         _loss_l1 = sum(training_step_losses_l1)/len(training_step_losses_l1)
+                        _loss_l1 = get_all_reduce_mean(_loss_l1).item()
                         print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train l1_loss {_loss_l1}, log step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
-                    if 'FT' in args.train_stage:
+                    if args.train_stage=='FT' or args.train_stage=='PT2':
                         _loss_l1 = sum(training_step_losses_l1)/len(training_step_losses_l1)
                         _loss_ms_ssim = sum(training_step_losses_ms_ssim)/len(training_step_losses_ms_ssim)
                         _loss_mix = sum(training_step_losses_mix)/len(training_step_losses_mix)
+                        _loss_l1 = get_all_reduce_mean(_loss_l1).item()
+                        _loss_ms_ssim = get_all_reduce_mean(_loss_ms_ssim).item()
+                        _loss_mix = get_all_reduce_mean(_loss_mix).item()
                         print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train l1_loss {_loss_l1}, train mix_loss {_loss_mix}({args.loss_l1_rate}*loss_l1+{args.loss_ms_ssim_rate}*loss_ms_ssim), train sm_ssim_loss {_loss_ms_ssim}, log step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
                     if args.global_rank==0:
                         just_show(reconstructed_pixel_values,sample,patch_size,args.patch_per_var_side,f'{args.data_output_path}/trainVis/')

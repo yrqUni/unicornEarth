@@ -30,4 +30,8 @@ deepspeed --hostfile=host main.py \
    --gradient_accumulation_steps 1 \
    --lr_scheduler_type cosine \
    --num_warmup_steps 0 \
+   --loss_l1_rate 1.0 \
+   --loss_ms_ssim_rate 1.0 \
+   --stats_path ./data/Stats/ \
+   --target_var TCWV \
    &> $OUTPUT_PATH/train.log
