@@ -205,12 +205,12 @@ def main():
                         losses_ms_ssim += loss_ms_ssim.float()
                         losses_mix += loss_mix.float()
                 losses_l1 = losses_l1 / (step + 1)
-                losses_l1 = get_all_reduce_mean(torch.tensor(losses_l1).to(device)).item()
+                losses_l1 = get_all_reduce_mean(losses_l1).item()
                 if args.train_stage=='PT2' or args.train_stage=='FT':
                     losses_ms_ssim = losses_ms_ssim / (step + 1)
-                    losses_ms_ssim = get_all_reduce_mean(torch.tensor(losses_ms_ssim).to(device)).item()
+                    losses_ms_ssim = get_all_reduce_mean(losses_ms_ssim).item()
                     losses_mix = losses_mix / (step + 1)
-                    losses_mix = get_all_reduce_mean(torch.tensor(losses_mix).to(device)).item()
+                    losses_mix = get_all_reduce_mean(losses_mix).item()
                 if args.global_rank==0:
                     just_show(reconstructed_pixel_values,sample,patch_size,args.patch_per_var_side,f'{args.data_output_path}/valVis/')
                 if args.train_stage=='PT1':
@@ -285,15 +285,15 @@ def main():
                     _estimated_to_consume = get_all_reduce_mean(torch.tensor(_estimated_to_consume).to(device)).item()
                     if args.train_stage=='PT1':
                         _loss_l1 = sum(training_step_losses_l1)/len(training_step_losses_l1)
-                        _loss_l1 = get_all_reduce_mean(torch.tensor(_loss_l1).to(device)).item()
+                        _loss_l1 = get_all_reduce_mean(_loss_l1).item()
                         print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train l1_loss {_loss_l1}, log step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
                     if args.train_stage=='FT' or args.train_stage=='PT2':
                         _loss_l1 = sum(training_step_losses_l1)/len(training_step_losses_l1)
                         _loss_ms_ssim = sum(training_step_losses_ms_ssim)/len(training_step_losses_ms_ssim)
                         _loss_mix = sum(training_step_losses_mix)/len(training_step_losses_mix)
-                        _loss_l1 = get_all_reduce_mean(torch.tensor(_loss_l1).to(device)).item()
+                        _loss_l1 = get_all_reduce_mean(_loss_l1).item()
                         _loss_ms_ssim = get_all_reduce_mean(_loss_ms_ssim).item()
-                        _loss_mix = get_all_reduce_mean(torch.tensor(_loss_mix).to(device)).item()
+                        _loss_mix = get_all_reduce_mean(_loss_mix).item()
                         print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train l1_loss {_loss_l1}, train mix_loss {_loss_mix}({args.loss_l1_rate}*loss_l1+{args.loss_ms_ssim_rate}*loss_ms_ssim), train sm_ssim_loss {_loss_ms_ssim}, log step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
                     if args.global_rank==0:
                         just_show(reconstructed_pixel_values,sample,patch_size,args.patch_per_var_side,f'{args.data_output_path}/trainVis/')
