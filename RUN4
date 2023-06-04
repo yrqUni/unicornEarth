@@ -7,7 +7,7 @@ mkdir -p $OUTPUT_PATH
 # 16 128 768 6*6 target mask rate ((128/16)^2)/((768/16)^2) 0.278
 # deepspeed mainSingle.py \
 # deepspeed --hostfile=host mainSingle.py \
-deepspeed --hostfile=hX mainSingle.py \
+deepspeed --hostfile=hX mainX.py \
    --data_sample_input_path ./DATA/Merge/ \
    --data_padmask_input_path ./DATA/PadMask/ \
    --val_rate 0.1 \
@@ -34,5 +34,6 @@ deepspeed --hostfile=hX mainSingle.py \
    --loss_ms_ssim_rate 2.0 \
    --stats_path ./data/Stats/ \
    --target_var TCWV \
-   &> $OUTPUT_PATH/train.log
+   --zero_stage 3 \
+   # &> $OUTPUT_PATH/train.log
    

@@ -311,7 +311,9 @@ def main():
                     losses_l1, losses_ms_ssim, losses_mix, _, _ = evaluation(args, model, eval_dataloader)
                     print_rank_0(f"<<<<<<<<<<<<<<<< End epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} val losses_l1 {losses_l1}, val losses_ms_ssim {losses_ms_ssim}, val losses_mix {losses_mix} >>>>>>>>>>>>>>>>", args.global_rank)
         model.tput_timer.update_epoch_count()
-
+    end_log_time = time.time()
+    AA = end_log_time-start_log_time
+    print_rank_0(f'TIME USE {AA}', args.global_rank)
     if args.ckpt_output_dir is not None:
         os.makedirs(os.path.abspath(os.path.dirname(args.ckpt_output_dir)), exist_ok=True)
         print_rank_0('saving the final model ...', args.global_rank)

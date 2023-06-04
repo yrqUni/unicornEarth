@@ -16,7 +16,7 @@ from transformers import SchedulerType, get_scheduler
 
 import deepspeed
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
-from utils.utils import print_rank_0, set_random_seed, get_all_reduce_mean, get_optimizer_grouped_parameters, save_hf_format, save_zero_three_model, just_show
+from utils.utils import print_rank_0, set_random_seed, get_all_reduce_mean, get_optimizer_grouped_parameters, save_hf_format, just_show
 from utils.ds_utils import get_train_ds_config
 from data import ERA5
 from model import create_Init_ViT_model, create_from_PT_ViT_model, create_Init_SwinTransV2_model, create_from_PT_SwinTransV2_model
@@ -313,9 +313,6 @@ def main():
         print_rank_0('saving the final model ...', args.global_rank)
         if args.global_rank == 0:
             save_hf_format(model, args)
-        if args.zero_stage == 3:
-            # For zero stage 3, each gpu only has a part of the model, so we need a special save function
-            save_zero_three_model(model, args.global_rank, args.ckpt_output_dir, zero_stage=args.zero_stage)
         print_rank_0('saving the final model DONE !!!', args.global_rank)
     
     torch.distributed.barrier()
