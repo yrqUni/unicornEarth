@@ -140,6 +140,7 @@ def main():
     if args.gradient_checkpointing:
         model.gradient_checkpointing_enable()
 
+    data_path_ = None
     start_log_time = time.time()
     for epoch in range(args.num_train_epochs):
         stepInEp = 0
@@ -150,19 +151,21 @@ def main():
             P = P+1
             data_path = f'{args.data_sample_input_path}/{data_part}'
             PadMask = joblib.load(f'{args.data_padmask_input_path}/{data_part}')
-            print_rank_0(f'################ Use {data_path} now ################',args.global_rank)
-            data = joblib.load(os.path.join(data_path))
-            trainData, valData, _, _ = train_test_split(data,np.ones(data.shape[0]),test_size=args.val_rate, random_state=args.seed, shuffle=False)
-            TrDataset = ERA5(trainData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.patch_per_var_side,args.pretrain_mask_rate)
-            ValDataset = ERA5(valData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.patch_per_var_side,args.pretrain_mask_rate) 
-            if args.local_rank == -1:
-                train_sampler = RandomSampler(TrDataset)
-                eval_sampler = SequentialSampler(ValDataset)
-            else:
-                train_sampler = DistributedSampler(TrDataset)
-                eval_sampler = DistributedSampler(ValDataset)
-            train_dataloader = DataLoader(TrDataset, sampler=train_sampler, batch_size=args.per_device_train_batch_size)
-            eval_dataloader = DataLoader(ValDataset, sampler=eval_sampler, batch_size=args.per_device_eval_batch_size)
+            if data_path!=data_path_:
+                print_rank_0(f'################ Loading {data_path} now ################',args.global_rank)
+                data = joblib.load(os.path.join(data_path))
+                trainData, valData, _, _ = train_test_split(data,np.ones(data.shape[0]),test_size=args.val_rate, random_state=args.seed, shuffle=False)
+                TrDataset = ERA5(trainData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.patch_per_var_side,args.pretrain_mask_rate)
+                ValDataset = ERA5(valData,num_patches,args.train_stage,args.target_num_patches,PadMask,args.patch_per_var_side,args.pretrain_mask_rate) 
+                if args.local_rank == -1:
+                    train_sampler = RandomSampler(TrDataset)
+                    eval_sampler = SequentialSampler(ValDataset)
+                else:
+                    train_sampler = DistributedSampler(TrDataset)
+                    eval_sampler = DistributedSampler(ValDataset)
+                train_dataloader = DataLoader(TrDataset, sampler=train_sampler, batch_size=args.per_device_train_batch_size)
+                eval_dataloader = DataLoader(ValDataset, sampler=eval_sampler, batch_size=args.per_device_eval_batch_size)
+                data_path_ = data_path
             torch.distributed.barrier()
 
             def evaluation(args, model, eval_dataloader):
@@ -196,6 +199,7 @@ def main():
                             outputs = model(sample, bool_masked_pos=mask)
                             _, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
                             loss_l1 = mask_l1_loss_fn.compute(pixel_values=GT,reconstructed_pixel_values=reconstructed_pixel_values,bool_masked_pos=mask)
+                            losses_ms_ssim
                     losses_l1 += loss_l1.float()
                     if args.train_stage=='PT2' or args.train_stage=='FT':
                         losses_ms_ssim += loss_ms_ssim.float()
@@ -288,7 +292,7 @@ def main():
                         _loss_ms_ssim = sum(training_step_losses_ms_ssim)/len(training_step_losses_ms_ssim)
                         _loss_mix = sum(training_step_losses_mix)/len(training_step_losses_mix)
                         _loss_l1 = get_all_reduce_mean(torch.tensor(_loss_l1).to(device)).item()
-                        _loss_ms_ssim = get_all_reduce_mean(torch.tensor(_loss_ms_ssim).to(device)).item()
+                        _loss_ms_ssim = get_all_reduce_mean(_loss_ms_ssim).item()
                         _loss_mix = get_all_reduce_mean(torch.tensor(_loss_mix).to(device)).item()
                         print_rank_0(f"epoch {epoch} part {P}/{len(os.listdir(args.data_sample_input_path))} stepInEp {stepInEp} train l1_loss {_loss_l1}, train mix_loss {_loss_mix}({args.loss_l1_rate}*loss_l1+{args.loss_ms_ssim_rate}*loss_ms_ssim), train sm_ssim_loss {_loss_ms_ssim}, log step {_log_step}, speed {_speed}, train schedule {_train_schedule}, all to consume {_all_to_consume}, estimated to consume {_estimated_to_consume}", args.global_rank)
                     if args.global_rank==0:

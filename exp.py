@@ -15,3 +15,7 @@
 # a = a.reshape(25,4)
 # X_train, X_test, y_train, y_test = train_test_split(a[:,:3], a[:,3:], test_size=0.33, random_state=1,shuffle=False)
 # X_train, X_test, y_train, y_test = train_test_split(a[:,:3], a[:,3:], test_size=0.33, random_state=1,shuffle=False)
+
+import joblib
+data = joblib.load('./DATA/Merge/2021')
+print(data.shape)

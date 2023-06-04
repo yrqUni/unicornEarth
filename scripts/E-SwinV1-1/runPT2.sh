@@ -8,8 +8,8 @@ mkdir -p $OUTPUT_PATH
 # deepspeed main.py \
 # deepspeed --hostfile=host main.py \
 deepspeed --hostfile=host main.py \
-   --data_sample_input_path ./DATA_Demo/Merge/ \
-   --data_padmask_input_path ./DATA_Demo/PadMask/ \
+   --data_sample_input_path ./DATA/Merge/ \
+   --data_padmask_input_path ./DATA/PadMask/ \
    --val_rate 0.1 \
    --pretrain_mask_rate 0.15 \
    --data_info ./data/DataInfo \
