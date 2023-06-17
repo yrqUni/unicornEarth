@@ -69,7 +69,7 @@ def parse_args():
     parser.add_argument('--zero_stage', type=int, default=0, help='')
     # log
     parser.add_argument("--log_step", type=int, default=1, help='')
-    parser.add_argument("--save_step", type=int, default=10, help='')
+    parser.add_argument("--save_step", type=int, default=1, help='')
     args = parser.parse_args()
     return args
 

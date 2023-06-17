@@ -34,6 +34,5 @@ deepspeed --hostfile=hX mainX.py \
    --loss_ms_ssim_rate 2.0 \
    --stats_path ./data/Stats/ \
    --target_var TCWV \
-   --zero_stage 3 \
    # &> $OUTPUT_PATH/train.log
    
