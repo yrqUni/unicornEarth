@@ -296,6 +296,7 @@ def main():
                         just_show(reconstructed_pixel_values,sample,patch_size,args.patch_per_var_side,f'{args.data_output_path}/trainVis/')
                     training_step_losses_l1 = []
                     training_step_losses_ms_ssim = []
+                    training_step_losses_mix = []
                 if stepInEp%args.save_step == 0 and args.global_rank == 0 and args.ckpt_output_dir is not None:
                     save_hf_format(model, args)
             # Evaluate perplexity on the validation set.
